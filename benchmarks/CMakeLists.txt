@@ -1,0 +1,4 @@
+add_executable(rapid_stats_bench selection_benchmark.cpp)
+target_link_libraries(rapid_stats_bench PRIVATE rapid_stats)
+rapid_stats_configure_target(rapid_stats_bench)
+rapid_stats_set_output_directory(rapid_stats_bench)
