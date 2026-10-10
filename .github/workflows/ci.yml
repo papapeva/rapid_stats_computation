@@ -3,11 +3,28 @@ name: ci
 on:
   push:
   pull_request:
+    types: [opened, edited, synchronize, reopened]
 
 permissions:
   contents: read
 
 jobs:
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^[A-Z]+-[0-9]+ \| .+'
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "Pull request title must start with the task id."
+            echo "Expected: QUI-1 | example_title"
+            echo "Actual:   $PR_TITLE"
+            exit 1
+          fi
+
   test:
     runs-on: ubuntu-latest
     steps:

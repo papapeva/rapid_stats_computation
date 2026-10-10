@@ -28,19 +28,21 @@ cd rapid_stats_computation
 
 В `master` напрямую не пушат: изменение попадает туда только через pull request и ревью.
 
+Имя ветки строго такое: `<номер задачи>/<краткое название>`. Номер задачи — код из трекера, название короткое, латиницей, слова через `_`. Пример: `QUI-1/structure_was_built`.
+
 ```text
 git checkout master
 git pull
-git checkout -b short-description
+git checkout -b QUI-1/structure_was_built
 ```
 
 Дальше коммиты делаются в этой ветке. Когда работа готова:
 
 ```text
-git push -u origin short-description
+git push -u origin QUI-1/structure_was_built
 ```
 
-На GitHub открой pull request в `master`. После замечаний дописывай коммиты в ту же ветку и снова пушь её.
+На GitHub открой pull request в `master`. Заголовок pull request строго начинается с номера задачи: `QUI-1 | example_title`. CI отклонит другой формат. После замечаний дописывай коммиты в ту же ветку и снова пушь её.
 
 ## Требования
 
