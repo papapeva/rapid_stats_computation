@@ -1,81 +1,64 @@
 # Быстрое вычисление порядковых статистик
 
-Учебный проект на C++17: k-я порядковая статистика на больших выборках и сравнение алгоритмов отбора.
+Учебный проект на C++17: k-я порядковая статистика на больших выборках.
 
-Порядковая статистика ранга `k` — элемент, который стоял бы на позиции `k`, если упорядочить выборку. Ранг нулевой: при компараторе по умолчанию `k = 0` — минимум, `k = n - 1` — максимум. Нижняя медиана — ранг `(n - 1) / 2`.
+Порядковая статистика ранга `k` — элемент, который стоял бы на позиции `k`, если упорядочить выборку. Ранг нулевой: `k = 0` — минимум, `k = n - 1` — максимум.
 
-Библиотека header-only: алгоритмы ш аблонные и лежат в `include/`. Каталога `src/` пока нет. Нешаблонный код позже стоит вынести в `src/` и сменить цель `rapid_stats` с `INTERFACE` на обычную библиотеку.
+Весь код алгоритма — `order_statistic.hpp`. Тесты — `order_statistic_test.cpp`. Сборка — `CMakeLists.txt`. Сейчас в заголовке два метода: полная сортировка и quickselect. Новый алгоритм добавляется в `enum class Algorithm`.
+
+```text
+order_statistic.hpp       алгоритм
+order_statistic_test.cpp  тесты
+CMakeLists.txt            сборка
+AGENTS.md                 правила для агентов
+README.md                 эта инструкция
+.clang-format             стиль кода
+.clang-tidy               статический анализ
+.github/workflows/ci.yml  проверка pull request на GitHub
+```
+
+## Клонирование
+
+```text
+git clone git@github.com:papapeva/rapid_stats_computation.git
+cd rapid_stats_computation
+```
+
+## Ветки
+
+В `master` напрямую не пушат: изменение попадает туда только через pull request и ревью.
+
+```text
+git checkout master
+git pull
+git checkout -b short-description
+```
+
+Дальше коммиты делаются в этой ветке. Когда работа готова:
+
+```text
+git push -u origin short-description
+```
+
+На GitHub открой pull request в `master`. После замечаний дописывай коммиты в ту же ветку и снова пушь её.
 
 ## Требования
 
 - CMake 3.20 или новее
-- компилятор C++17: GCC, Clang или MSVC
-- для форматирования: `clang-format` 18 (`pip install clang-format==18.1.8`)
-- для статического анализа: `clang-tidy` и генератор Ninja (нужен `compile_commands.json`)
+- компилятор C++17
+- `clang-format` 18 и `clang-tidy` для линтеров
 
-Внешних библиотек нет: тесты подключаются к CTest своим небольшим прогоном, конфигурация не ходит в сеть.
-
-## Структура
-
-```text
-include/rapid_stats/          публичный API
-include/rapid_stats/detail/   реализации алгоритмов
-tests/                        автотесты (CTest)
-benchmarks/                   сравнение времени и числа сравнений
-examples/                     короткий пример вызова
-cmake/                        предупреждения компилятора и цели линтеров
-.github/workflows/ci.yml      сборка, тесты, clang-format, clang-tidy
-```
-
-Публичная точка входа — `rapid_stats/order_statistic.hpp`, цель CMake — `rapid_stats::rapid_stats`.
+Внешних библиотек нет.
 
 ## Сборка и тесты
 
-Один каталог сборки на тип конфигурации. Пресеты: `debug` и `release`.
-
 ```text
-cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug --output-on-failure
-```
-
-Без пресетов, генератор Ninja или Makefiles:
-
-```text
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Visual Studio — мультиконфигурационный генератор, тип сборки задаётся на шаге build:
-
-```text
-cmake -S . -B build
-cmake --build build --config Debug
-ctest --test-dir build -C Debug --output-on-failure
-```
-
-Исполняемые файлы попадают в `build/bin/` (или `build-release/bin/`):
-
-- `rapid_stats_tests` — автотесты
-- `rapid_stats_example` — пример
-- `rapid_stats_bench` — бенчмарк
-
-## Бенчмарк
-
-Запускать в Release: в Debug цифры времени не показательны.
-
-```text
-cmake --preset release
-cmake --build --preset release --target rapid_stats_bench
-build-release/bin/rapid_stats_bench 1000000
-```
-
-Аргумент — размер выборки от 2 до 50 000 000, по умолчанию 1 000 000. В таблице три свои алгоритма и `std::nth_element` как библиотечный ориентир. Колонка `ms` включает копирование выборки (API его не портит). Колонка `comparisons` считает только вызовы компаратора, отдельным прогоном.
-
 ## Линтеры
-
-После конфигурации:
 
 ```text
 cmake --build build --target format
@@ -83,33 +66,10 @@ cmake --build build --target format-check
 cmake --build build --target tidy
 ```
 
-`format` переписывает исходники. `format-check` только проверяет стиль и падает при расхождении. `tidy` гоняет clang-tidy по `.cpp`; заголовки библиотеки он видит через них. Для `tidy` нужен Ninja или Makefile: у генератора Visual Studio нет `compile_commands.json`.
+`format` переписывает исходники. `format-check` только проверяет стиль. `tidy` нужен каталог сборки Ninja: у него есть `compile_commands.json`.
+
+`clang-format` должен быть версии 18, иначе проверка стиля разойдётся с CI:
 
 ```text
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build build --target tidy
+pip install clang-format==18.1.8
 ```
-
-В CI включены предупреждения как ошибки, AddressSanitizer и UBSan.
-
-## Алгоритмы
-
-Все три метода читают копию выборки. Сложность ниже — это уже фаза отбора, без учёта общего копирования.
-
-| Алгоритм | Имя в коде | Время | Зачем в сравнении |
-| --- | --- | --- | --- |
-| Полная сортировка | `FullSort` | O(n log n) | Эталон правильности |
-| Quickselect, pivot — медиана трёх | `Quickselect` | среднее O(n), худшее O(n²) | Практический линейный отбор, в том числе медиана |
-| Куча размера k + 1 | `HeapSelect` | O(n log k) | Маленький ранг на большой выборке |
-
-`order_statistic` по умолчанию вызывает quickselect. Компаратор задаёт порядок так же, как в `std::sort`: `std::greater<>` делает `k = 0` максимумом.
-
-## Как добавить алгоритм
-
-1. Новое значение в `enum class Algorithm`.
-2. Реализация в `include/rapid_stats/detail/` с тем же контрактом, что у `std::nth_element`: после вызова в позиции `nth` лежит нужный элемент.
-3. Ветка в `order_statistic` и имя в `algorithm_name`. Флаг `-Wswitch-enum` (и MSVC 4062) напомнит о пропущенной ветке.
-4. Элемент в `kAlgorithms`, чтобы тесты и бенчмарк подхватили метод сами.
-5. При новом `.cpp` в тестах — строка в `tests/CMakeLists.txt`. Новый сценарий в существующем файле достаточно оформить макросом `RS_TEST`.
-
-Ближайшее продолжение по теме: introselect или медиана медиан (линейное время в худшем случае), выбор метода по отношению `k / n`, потоковые и внешние квантили, когда выборка не помещается в память.

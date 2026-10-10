@@ -29,7 +29,6 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DRAPID_STATS_WARNINGS_AS_ERRORS=ON
-          -DRAPID_STATS_ENABLE_SANITIZERS=ON
 
       - name: Check formatting
         run: cmake --build build --target format-check

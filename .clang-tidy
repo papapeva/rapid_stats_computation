@@ -16,5 +16,5 @@ Checks: >
   cppcoreguidelines-avoid-goto
 
 WarningsAsErrors: ''
-HeaderFilterRegex: 'rapid_stats[/\\].*'
+HeaderFilterRegex: 'order_statistic\.hpp'
 FormatStyle: none

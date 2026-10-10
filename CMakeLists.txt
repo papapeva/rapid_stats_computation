@@ -11,42 +11,77 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(RAPID_STATS_BUILD_BENCHMARKS "Build micro-benchmarks" ON)
-option(RAPID_STATS_BUILD_EXAMPLES "Build usage examples" ON)
 option(RAPID_STATS_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
-option(RAPID_STATS_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan (GCC/Clang)" OFF)
-
-include(cmake/warnings.cmake)
 
 add_library(rapid_stats INTERFACE)
 add_library(rapid_stats::rapid_stats ALIAS rapid_stats)
-target_include_directories(rapid_stats INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-)
+target_include_directories(rapid_stats INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(rapid_stats INTERFACE cxx_std_17)
-target_sources(rapid_stats INTERFACE
-    ${PROJECT_SOURCE_DIR}/include/rapid_stats/order_statistic.hpp
-    ${PROJECT_SOURCE_DIR}/include/rapid_stats/detail/requirements.hpp
-    ${PROJECT_SOURCE_DIR}/include/rapid_stats/detail/full_sort.hpp
-    ${PROJECT_SOURCE_DIR}/include/rapid_stats/detail/quickselect.hpp
-    ${PROJECT_SOURCE_DIR}/include/rapid_stats/detail/heap_select.hpp
-)
+target_sources(rapid_stats INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/order_statistic.hpp)
+
+add_executable(rapid_stats_tests order_statistic_test.cpp)
+target_link_libraries(rapid_stats_tests PRIVATE rapid_stats)
+target_compile_features(rapid_stats_tests PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(rapid_stats_tests PRIVATE /W4 /permissive- /utf-8 /w44062)
+else()
+    target_compile_options(rapid_stats_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wswitch-enum)
+endif()
+if(RAPID_STATS_WARNINGS_AS_ERRORS)
+    if(MSVC)
+        target_compile_options(rapid_stats_tests PRIVATE /WX)
+    else()
+        target_compile_options(rapid_stats_tests PRIVATE -Werror)
+    endif()
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
-    add_subdirectory(tests)
+    add_test(NAME order_statistic COMMAND rapid_stats_tests)
 endif()
 
-if(RAPID_STATS_BUILD_BENCHMARKS)
-    add_subdirectory(benchmarks)
+set(FORMAT_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/order_statistic.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/order_statistic_test.cpp
+)
+
+find_program(CLANG_FORMAT_EXE NAMES clang-format-18 clang-format)
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+
+if(CLANG_FORMAT_EXE)
+    add_custom_target(format
+        COMMAND ${CLANG_FORMAT_EXE} -i ${FORMAT_FILES}
+        COMMENT "Format C++ sources"
+        VERBATIM
+    )
+    add_custom_target(format-check
+        COMMAND ${CLANG_FORMAT_EXE} --dry-run --Werror ${FORMAT_FILES}
+        COMMENT "Check C++ formatting"
+        VERBATIM
+    )
+else()
+    add_custom_target(format
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format was not found in PATH"
+        COMMAND ${CMAKE_COMMAND} -E false
+    )
+    add_custom_target(format-check
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format was not found in PATH"
+        COMMAND ${CMAKE_COMMAND} -E false
+    )
 endif()
 
-if(RAPID_STATS_BUILD_EXAMPLES)
-    add_subdirectory(examples)
+if(CLANG_TIDY_EXE)
+    add_custom_target(tidy
+        COMMAND ${CLANG_TIDY_EXE} -p ${CMAKE_BINARY_DIR} --warnings-as-errors=*
+                ${CMAKE_CURRENT_SOURCE_DIR}/order_statistic_test.cpp
+        COMMENT "Run clang-tidy"
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+else()
+    add_custom_target(tidy
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy was not found in PATH"
+        COMMAND ${CMAKE_COMMAND} -E false
+    )
 endif()
-
-include(cmake/lint.cmake)
-
-message(STATUS "rapid_stats tests: ${BUILD_TESTING}")
-message(STATUS "rapid_stats benchmarks: ${RAPID_STATS_BUILD_BENCHMARKS}")
-message(STATUS "rapid_stats examples: ${RAPID_STATS_BUILD_EXAMPLES}")
