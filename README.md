@@ -1,20 +1,20 @@
 # Быстрое вычисление порядковых статистик
 
-Учебный проект на C++17: k-я порядковая статистика на больших выборках.
+Учебный проект на C++17: поиск порядковых статистик.
 
 Порядковая статистика ранга `k` — элемент, который стоял бы на позиции `k`, если упорядочить выборку. Ранг нулевой: `k = 0` — минимум, `k = n - 1` — максимум.
 
-Весь код алгоритма — `order_statistic.hpp`. Тесты — `order_statistic_test.cpp`. Сборка — `CMakeLists.txt`. Сейчас в заголовке два метода: полная сортировка и quickselect. Новый алгоритм добавляется в `enum class Algorithm`.
+Код алгоритмов — каталог `algo/`. Базовый класс — `algo/order_statistic_algorithm.hpp`. Любой алгоритм наследуется от `rapid_stats::OrderStatisticAlgorithm` и переопределяет `sort`. Сборка — `CMakeLists.txt`.
 
 ```text
-order_statistic.hpp       алгоритм
-order_statistic_test.cpp  тесты
-CMakeLists.txt            сборка
-AGENTS.md                 правила для агентов
-README.md                 эта инструкция
-.clang-format             стиль кода
-.clang-tidy               статический анализ
-.github/workflows/ci.yml  проверка pull request на GitHub
+algo/order_statistic_algorithm.hpp  абстрактный класс
+check_function_comments.py          комментарий в теле функции
+CMakeLists.txt                      сборка
+AGENTS.md                           правила для агентов
+README.md                           эта инструкция
+.clang-format                       стиль кода
+.clang-tidy                         статический анализ
+.github/workflows/ci.yml            проверка pull request на GitHub
 ```
 
 ## Клонирование
@@ -52,12 +52,11 @@ git push -u origin QUI-1/structure_was_built
 
 Внешних библиотек нет.
 
-## Сборка и тесты
+## Сборка
 
 ```text
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
-ctest --test-dir build --output-on-failure
 ```
 
 ## Линтеры
@@ -68,7 +67,21 @@ cmake --build build --target format-check
 cmake --build build --target tidy
 ```
 
-`format` переписывает исходники. `format-check` только проверяет стиль. `tidy` нужен каталог сборки Ninja: у него есть `compile_commands.json`.
+`format` переписывает исходники. `format-check` только проверяет стиль. `tidy` гоняет clang-tidy и проверяет комментарий в теле каждой функции из `algo/order_statistic_algorithm.hpp`.
+
+Первая строка внутри функции — многострочный комментарий. Сначала автор этой функции, затем что она принимает и что возвращает:
+
+```cpp
+void example(int value) {
+    /*
+     * Автор: Имя Фамилия
+     * Принимает: value — смысл аргумента.
+     * Возвращает: смысл результата.
+     */
+}
+```
+
+У объявления без тела (`= default`, `= delete`, `= 0`) такой строки нет, комментарий там не требуется.
 
 `clang-format` должен быть версии 18, иначе проверка стиля разойдётся с CI:
 

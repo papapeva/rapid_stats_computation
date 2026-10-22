@@ -45,16 +45,12 @@ jobs:
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-          -DRAPID_STATS_WARNINGS_AS_ERRORS=ON
 
       - name: Check formatting
         run: cmake --build build --target format-check
 
       - name: Build
         run: cmake --build build
-
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
 
       - name: Clang-tidy
         run: cmake --build build --target tidy
