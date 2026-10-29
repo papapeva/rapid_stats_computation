@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
-// Приближённый выбор по алгоритму Random Sampling из задания.
+// Приближённый выбор по алгоритму Random Sampling .
 // k — нулевой индекс исходного массива.
 // select_exact должен принимать (vector<T>&, size_t zero_based_k)
 // и возвращать точный k-й элемент.

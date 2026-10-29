@@ -7,7 +7,7 @@
 #include <vector>
 
 // Точный выбор элемента по нулевому индексу k.
-// После вызова массив может быть переставлен.
+// функция реализации алгоритма Floyd_rivest
 template <typename T>
 void select_floyd_rivest_impl(std::vector<T>& a, int left, int right, int k) {
     while (right > left) {

@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-// Обёртка над std::nth_element.
+// Обёртка над std::nth_element (библиотечная функция нахождения k-ой статистики).
 // k — нулевой индекс; массив может быть переставлен.
 template <typename T>
 T standard_select(std::vector<T>& a, std::size_t k) {

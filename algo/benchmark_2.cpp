@@ -1,5 +1,9 @@
+// файл тестинга и визуализации
+
+// Как запускать:
 // g++ -std=c++17 -O2 -Wall -Wextra benchmark_2.cpp -o benchmark
 // ./benchmark.exe
+
 #include <algorithm>
 #include <array>
 #include <chrono>

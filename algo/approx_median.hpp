@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <algorithm>
@@ -10,6 +9,8 @@
 #include <stdexcept>
 #include <vector>
 
+
+// Файл реализации алгоритма Approx median
 template <typename T>
 T approximate_order_statistic(
     std::vector<T>& a,
