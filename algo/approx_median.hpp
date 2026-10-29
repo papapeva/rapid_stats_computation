@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <algorithm>
@@ -5,99 +6,94 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <optional>
 #include <random>
 #include <stdexcept>
 #include <vector>
 
-// Приближённое вычисление k-й порядковой статистики.
-//
-// T — тип элементов массива.
-// k — целевой ранг, начиная с 1.
-// c — параметр надёжности, c > 0.
-// epsilon — допустимая ошибка относительного ранга.
-// seed — начальное значение генератора случайных чисел.
-//
-// Возвращает std::nullopt, если массив пуст или k некорректен.
-// Требуется C++17.
-
 template <typename T>
-std::optional<T> approximate_order_statistic(
-    const std::vector<T>& values,
+T approximate_order_statistic(
+    std::vector<T>& a,
     std::size_t k,
-    double c,
-    double epsilon = 0.05,
-    std::uint64_t seed = 12345)
+    std::size_t h,
+    double delta,
+    std::uint64_t seed)
 {
-    const std::size_t n = values.size();
+    const std::size_t n = a.size();
 
-    // Проверка входных данных.
-    if (n == 0 || k < 1 || k > n) {
-        return std::nullopt;
+    if (n == 0) {
+        throw std::invalid_argument("Array must not be empty");
     }
 
-    if (!std::isfinite(c) || c <= 0.0) {
-        throw std::invalid_argument("c must be positive");
+    if (k >= n) {
+        throw std::out_of_range("k is out of range");
     }
 
-    if (!std::isfinite(epsilon) ||
-        epsilon <= 0.0 || epsilon >= 1.0) {
-        throw std::invalid_argument("epsilon must be in (0, 1)");
+    if (!std::isfinite(delta) ||
+        delta <= 0.0 || delta >= 1.0) {
+        throw std::invalid_argument("delta must be in (0, 1)");
     }
 
-    if (n == 1) {
-        return values[0];
-    }
-
-    // Размер выборки согласно оценке DKW:
-    // P(error > epsilon) <= 2 * exp(-2 * s * epsilon^2).
-    const double required =
-        (c * std::log(static_cast<double>(n)) + std::log(2.0))
-        / (2.0 * epsilon * epsilon);
-
-    const std::size_t sample_size =
-        required >= static_cast<double>(n)
-            ? n
-            : std::max<std::size_t>(
-                  1, static_cast<std::size_t>(std::ceil(required)));
-
-    // Если выборка совпадает с исходным массивом,
-    // можно получить точный ответ.
-    if (sample_size == n) {
-        std::vector<T> sorted(values);
+    // Если требуется точный результат, сортируем весь массив.
+    if (h == 0 || n == 1) {
+        std::vector<T> sorted = a;
         std::sort(sorted.begin(), sorted.end());
-        return sorted[k - 1];
+        return sorted[k];
     }
 
-    // Генератор случайных чисел с фиксированным seed.
-    std::mt19937_64 generator(seed);
+    // Допустимая ошибка ранга в долях размера массива.
+    const long double epsilon =
+        static_cast<long double>(h) /
+        static_cast<long double>(n);
+
+    // Размер выборки по оценке DKW:
+    // m >= ln(2 / delta) / (2 * epsilon^2).
+    const long double log_term =
+        std::log(2.0L) -
+        std::log(static_cast<long double>(delta));
+
+    const long double raw_m =
+        log_term / (2.0L * epsilon * epsilon);
+
+    // Если выборка получается слишком большой,
+    // используем точный алгоритм.
+    if (!std::isfinite(raw_m) ||
+        raw_m >= static_cast<long double>(n)) {
+        std::vector<T> sorted = a;
+        std::sort(sorted.begin(), sorted.end());
+        return sorted[k];
+    }
+
+    const std::size_t m = std::max<std::size_t>(
+        1,
+        static_cast<std::size_t>(std::ceil(raw_m)));
 
     // Случайная выборка без возвращения.
+    std::mt19937_64 rng(seed);
+
     std::vector<T> sample;
-    sample.reserve(sample_size);
+    sample.reserve(m);
 
     std::sample(
-        values.begin(),
-        values.end(),
+        a.begin(),
+        a.end(),
         std::back_inserter(sample),
-        sample_size,
-        generator
-    );
+        m,
+        rng);
 
-    // Сортировка выборки.
     std::sort(sample.begin(), sample.end());
 
-    // Вычисление относительного целевого ранга.
-    const double fraction =
-        static_cast<double>(k - 1) / static_cast<double>(n - 1);
+    // Переводим целевой ранг в соответствующий ранг выборки.
+    // В исходном массиве и выборке используем ранги с 1.
+    const long double raw_j =
+        std::ceil(
+            static_cast<long double>(m) *
+            static_cast<long double>(k + 1) /
+            static_cast<long double>(n));
 
-    std::size_t index = static_cast<std::size_t>(
-        std::floor(fraction * (sample_size - 1))
-    );
+    const std::size_t j = std::clamp(
+        static_cast<std::size_t>(raw_j),
+        std::size_t{1},
+        m);
 
-    index = std::min(index, sample.size() - 1);
-
-    return sample[index];
+    return sample[j - 1];
 }
-
-
