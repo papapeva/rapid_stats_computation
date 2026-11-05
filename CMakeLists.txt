@@ -15,12 +15,24 @@ add_library(rapid_stats INTERFACE)
 add_library(rapid_stats::rapid_stats ALIAS rapid_stats)
 target_include_directories(rapid_stats INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(rapid_stats INTERFACE cxx_std_17)
-target_sources(rapid_stats INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_algorithm.hpp)
+file(GLOB_RECURSE ALGORITHM_HEADERS CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/algo/*.hpp)
+target_sources(rapid_stats INTERFACE ${ALGORITHM_HEADERS})
 
-set(FORMAT_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_algorithm.hpp
-)
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(algorithms_test tests/algorithms_test.cpp)
+    target_link_libraries(algorithms_test PRIVATE rapid_stats::rapid_stats)
+    if(MSVC)
+        target_compile_options(algorithms_test PRIVATE /utf-8 /W4)
+    else()
+        target_compile_options(algorithms_test PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME algorithms_contract COMMAND algorithms_test)
+endif()
+
+set(FORMAT_FILES ${ALGORITHM_HEADERS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/algorithms_test.cpp)
 
 find_program(CLANG_FORMAT_EXE NAMES clang-format-18 clang-format)
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
@@ -51,7 +63,7 @@ endif()
 if(CLANG_TIDY_EXE AND Python3_EXECUTABLE)
     add_custom_target(tidy
         COMMAND ${CLANG_TIDY_EXE} --warnings-as-errors=*
-                ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_algorithm.hpp
+                ${ALGORITHM_HEADERS}
                 -- -std=c++17
         COMMAND ${Python3_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/check_function_comments.py

@@ -52,5 +52,8 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      - name: Test algorithms
+        run: ctest --test-dir build --output-on-failure
+
       - name: Clang-tidy
         run: cmake --build build --target tidy
