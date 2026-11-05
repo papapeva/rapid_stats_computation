@@ -1,9 +1,10 @@
-// Файл реализации алгоритма точного нахождения k-статистик методом Floyd-Rivest
+// Файл реализации алгоритма точного нахождения k-статистики методом Floyd-Rivest
 // Класс class FloydRivestSelect наследуется от OrderStatisticAlgorithm
+// На вход должен подаваться массив, содержащий только один ранк, может потом алгоритм будет менятся в изменением логини проекта
 // пример использования:
 
 // std::vector<int> data = {9, 2, 7, 1, 5, 3, 8};
-// std::vector<std::size_t> ranks = {2, 5};
+// std::vector<std::size_t> ranks = {2};
 // rapid_stats::FloydRivestAlgorithm<std::vector<int>> algorithm(data);
 // auto result = algorithm.sort(ranks);
 // возвращается объект типа std::vector<iterator> - найденный статистики
@@ -203,6 +204,11 @@ public:
     std::vector<iterator> sort(
         const std::vector<std::size_t>& ranks) override {
 
+        if (ranks.size() > 1) {
+            throw std::invalid_argument(
+                "Floyd-Rivest algorithm accepts only one rank");
+        }
+
         const auto distance =
             std::distance(this->begin_, this->end_);
 
@@ -231,39 +237,20 @@ public:
             elements.push_back(it);
         }
 
-        // Убираем повторяющиеся ранги для вычислений.
-        std::vector<std::size_t> unique_ranks = ranks;
-
-        std::sort(unique_ranks.begin(), unique_ranks.end());
-
-        unique_ranks.erase(
-            std::unique(unique_ranks.begin(), unique_ranks.end()),
-            unique_ranks.end());
-
         const auto comp = [](
             const iterator& lhs,
             const iterator& rhs) {
             return *lhs < *rhs;
         };
 
-        detail::select_multiple(
+        detail::floyd_rivest_select(
             elements,
-            unique_ranks,
-            0,
-            unique_ranks.size(),
             0,
             n - 1,
+            ranks[0],
             comp);
 
-        // Возвращаем результаты в исходном порядке ranks.
-        std::vector<iterator> result;
-        result.reserve(ranks.size());
-
-        for (const std::size_t rank : ranks) {
-            result.push_back(elements[rank]);
-        }
-
-        return result;
+        return {elements[ranks[0]]};
     }
 };
 

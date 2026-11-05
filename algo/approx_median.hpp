@@ -1,3 +1,18 @@
+// Файл реализации алгоритма приближённого нахождения k-статистики методом Approx Median
+// Класс ApproxMedianAlgorithm наследуется от OrderStatisticAlgorithm
+// На вход должен подаваться массив, содержащий только один ранк, может потом алгоритм будет менятся в изменением логини проекта
+// пример использования:
+
+// std::vector<int> data = {9, 2, 7, 1, 5, 3, 8};
+// std::vector<std::size_t> ranks = {2};
+// rapid_stats::ApproxMedianAlgorithm<std::vector<int>> algorithm(
+//     data.begin(),
+//     data.end(),
+//     0.1,  // epsilon
+//     1.0   // c
+// );
+// auto result = algorithm.sort(ranks);
+// возвращается объект типа std::vector<iterator> - найденный статистики
 #pragma once
 
 #include <algorithm>
@@ -45,37 +60,36 @@ public:
     std::vector<iterator> sort(
         const std::vector<std::size_t>& ranks) override {
 
-        const auto n_signed = std::distance(this->begin_, this->end_);
+        // Алгоритм поддерживает поиск только одной статистики.
+        if (ranks.size() > 1) {
+            throw std::invalid_argument(
+                "ApproxMedianAlgorithm accepts only one rank"
+            );
+        }
+
+        const auto n_signed = std::distance(
+            this->begin_,
+            this->end_
+        );
+
         if (n_signed < 0) {
             throw std::invalid_argument("Invalid iterator range");
         }
 
         const std::size_t n = static_cast<std::size_t>(n_signed);
 
-        if (n == 0) {
-            if (!ranks.empty()) {
-                throw std::out_of_range(
-                    "Cannot select a rank from an empty container");
-            }
+        if (ranks.empty()) {
             return {};
         }
 
-        for (const std::size_t k : ranks) {
-            if (k >= n) {
-                throw std::out_of_range("Rank must be in [0, n)");
-            }
-        }
+        const std::size_t k = ranks[0];
 
-        std::vector<iterator> result;
-        result.reserve(ranks.size());
-
-        if (ranks.empty()) {
-            return result;
+        if (k >= n) {
+            throw std::out_of_range("Rank must be in [0, n)");
         }
 
         if (n == 1) {
-            result.assign(ranks.size(), this->begin_);
-            return result;
+            return {this->begin_};
         }
 
         // Вычисляем размер выборки:
@@ -89,14 +103,18 @@ public:
 
         if (std::isfinite(raw_sample_size) &&
             raw_sample_size < static_cast<long double>(n)) {
+
             sample_size = static_cast<std::size_t>(
-                std::ceil(raw_sample_size));
+                std::ceil(raw_sample_size)
+            );
+
             if (sample_size == 0) {
                 sample_size = 1;
             }
         }
 
-        // Если выборка покрывает весь массив, точный результат.
+        // Если выборка покрывает весь массив,
+        // находим точную порядковую статистику.
         if (sample_size >= n) {
             std::vector<iterator> all;
             all.reserve(n);
@@ -105,58 +123,67 @@ public:
                 all.push_back(it);
             }
 
-            std::sort(all.begin(), all.end(),
+            std::sort(
+                all.begin(),
+                all.end(),
                 [](iterator a, iterator b) {
                     return *a < *b;
-                });
+                }
+            );
 
-            for (const std::size_t k : ranks) {
-                result.push_back(all[k]);
-            }
-            return result;
+            return {all[k]};
         }
 
-        // Reservoir sampling: равновероятная выборка sample_size
-        // элементов без повторений из произвольного диапазона.
+        // Reservoir sampling: выборка без повторений.
         std::mt19937_64 rng(seed_);
+
         std::vector<iterator> sample;
         sample.reserve(sample_size);
 
         std::size_t index = 0;
+
         for (auto it = this->begin_; it != this->end_; ++it, ++index) {
             if (index < sample_size) {
                 sample.push_back(it);
             } else {
-                std::uniform_int_distribution<std::size_t> dist(0, index);
+                std::uniform_int_distribution<std::size_t> dist(
+                    0, index
+                );
+
                 const std::size_t j = dist(rng);
+
                 if (j < sample_size) {
                     sample[j] = it;
                 }
             }
         }
 
-        // Сортируем только выборку.
-        std::sort(sample.begin(), sample.end(),
+        // Сортируем выборку.
+        std::sort(
+            sample.begin(),
+            sample.end(),
             [](iterator a, iterator b) {
                 return *a < *b;
-            });
+            }
+        );
 
-        // Переводим исходный ранг в относительный ранг выборки.
-        // Нулевые ранги: [0, n-1].
-        for (const std::size_t k : ranks) {
-            // целевая доля
-            const long double q =
-                static_cast<long double>(k) / static_cast<long double>(n);
+        // Переводим исходный ранг в ранг выборки.
+        const long double q =
+            static_cast<long double>(k) /
+            static_cast<long double>(n);
 
-            // ранг в выборке: округляем к ближайшему, а не floor
-            long double pos = q * static_cast<long double>(sample_size - 1);
-            std::size_t sample_rank = static_cast<std::size_t>(std::llround(pos));
+        const long double pos =
+            q * static_cast<long double>(sample_size - 1);
 
-            if (sample_rank >= sample_size) sample_rank = sample_size - 1;
-            result.push_back(sample[sample_rank]);
+        std::size_t sample_rank = static_cast<std::size_t>(
+            std::llround(pos)
+        );
+
+        if (sample_rank >= sample_size) {
+            sample_rank = sample_size - 1;
         }
 
-        return result;
+        return {sample[sample_rank]};
     }
 
 private:

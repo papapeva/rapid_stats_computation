@@ -1,9 +1,10 @@
-// Файл реализации алгоритма приближённого нахождения k-статистик методом Random sampling
+// Файл реализации алгоритма приближённого нахождения k-статистики методом Random sampling
 // Класс RandomSamplingAlgorithm наследуется от OrderStatisticAlgorithm
+// На вход должен подаваться массив, содержащий только один ранк, может потом алгоритм будет менятся в изменением логини проекта
 // пример использования:
 
 // std::vector<int> data = {9, 2, 7, 1, 5, 3, 8};
-// std::vector<std::size_t> ranks = {2, 5};
+// std::vector<std::size_t> ranks = {2};
 // auto exact_selector =[](std::vector<int>& values, std::size_t k) {
 //         return floyd_rivest_select(values, k);};
 // rapid_stats::RandomSamplingAlgorithm<std::vector<int>, decltype(exact_selector)> algorithm(
@@ -68,6 +69,14 @@ public:
     std::vector<iterator> sort(
         const std::vector<std::size_t>& ranks
     ) override {
+
+        // Алгоритм поддерживает поиск только одной статистики.
+        if (ranks.size() > 1) {
+            throw std::invalid_argument(
+                "RandomSamplingAlgorithm accepts only one rank"
+            );
+        }
+
         const auto distance = std::distance(
             this->begin_,
             this->end_
@@ -103,31 +112,32 @@ public:
             this->end_
         );
 
-        for (std::size_t rank : ranks) {
-            value_type selected = random_sampling_select(
-                data,
-                rank,
-                h_,
-                delta_,
-                seed_,
-                select_exact_
-            );
+        const std::size_t rank = ranks[0];
 
-            // Находим в исходном контейнере элемент
-            // со значением, которое вернул алгоритм.
-            auto it = std::find_if(
-                this->begin_,
-                this->end_,
-                [&](const auto& value) {
-                    return value == selected;
-                }
-            );
+        value_type selected = random_sampling_select(
+            data,
+            rank,
+            h_,
+            delta_,
+            seed_,
+            select_exact_
+        );
 
-            result.push_back(it);
-        }
+        // Находим в исходном контейнере элемент
+        // со значением, которое вернул алгоритм.
+        auto it = std::find_if(
+            this->begin_,
+            this->end_,
+            [&](const auto& value) {
+                return value == selected;
+            }
+        );
+
+        result.push_back(it);
 
         return result;
     }
+
 
 private:
     std::size_t h_;

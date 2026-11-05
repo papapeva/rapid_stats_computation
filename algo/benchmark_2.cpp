@@ -1,3 +1,8 @@
+// Как запускать
+// g++ -std=c++17 -O2 benchmark_2.cpp -o benchmark.exe
+// ./benchmark.exe 100000 (размер выборки, которую хотите сгенерить) или просто benchmark.exe (смотря что вы используете)
+
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -75,11 +80,11 @@ std::vector<RankRequest> make_ranks(std::size_t n) {
     }
 
     return {
-        {"first (min)", 0},
+        // {"first (min)", 0},
         {"10%", (n - 1) / 10},
-        {"50% (median)", (n - 1) / 2},
-        {"90%", (n - 1) * 9 / 10},
-        {"last (max)", n - 1}
+        // {"50% (median)", (n - 1) / 2},
+        // {"90%", (n - 1) * 9 / 10},
+        // {"last (max)", n - 1}
     };
 }
 
