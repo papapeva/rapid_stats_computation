@@ -8,6 +8,9 @@
 
 ```text
 algo/order_statistic_algorithm.hpp  базовые классы
+algo/approx_median.hpp              приближённая медиана
+algo/floyd_rivest.hpp               точный Floyd–Rivest
+algo/random_sampling.hpp            приближённая случайная выборка
 check_function_comments.py          комментарий в теле функции
 CMakeLists.txt                      сборка
 AGENTS.md                           правила для агентов
