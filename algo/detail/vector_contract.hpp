@@ -18,13 +18,13 @@ template <typename Container>
 void validate_ranks(const Container& data, const std::vector<std::size_t>& ranks) {
     /*
      * Автор: Codex (OpenAI).
-     * Принимает: data — исходный массив; ranks — нулевые ранги в порядке запроса.
+     * Принимает: data — исходный массив; ranks — ранги с единицы в порядке запроса.
      * Возвращает: ничего; неверные ранги или неконечные числа вызывают исключение до перестановок.
      */
     static_assert(IsNumericVector<Container>::value, "a numeric std::vector is required");
     for (const auto rank : ranks) {
-        if (rank >= data.size()) {
-            throw std::out_of_range("rank must be in [0, size)");
+        if (rank == 0 || rank > data.size()) {
+            throw std::out_of_range("rank must be in [1, size]");
         }
     }
     if (ranks.empty()) {
@@ -49,13 +49,13 @@ std::vector<typename Container::iterator> rank_iterators(Container& data,
                                                          const std::vector<std::size_t>& ranks) {
     /*
      * Автор: Codex (OpenAI).
-     * Принимает: data с установленными статистиками и ranks с нулевыми рангами.
+     * Принимает: data с установленными статистиками и ranks с рангами с единицы.
      * Возвращает: итераторы в порядке запроса, включая повторяющиеся ранги.
      */
     std::vector<typename Container::iterator> result;
     result.reserve(ranks.size());
     for (const auto rank : ranks) {
-        result.push_back(data.begin() + static_cast<typename Container::difference_type>(rank));
+        result.push_back(data.begin() + static_cast<typename Container::difference_type>(rank - 1));
     }
     return result;
 }

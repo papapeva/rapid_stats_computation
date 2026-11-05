@@ -1,35 +1,45 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <utility>
 #include <vector>
 
 namespace rapid_stats {
 
-// Базовый класс поиска порядковых статистик. Контейнер не копируется.
+// Корень алгоритмов порядковых статистик. Снаружи не создаётся.
+// Ранг с единицы: 1 — минимум, n — максимум. Индекс элемента — rank - 1.
 template <typename Container> class OrderStatisticAlgorithm {
 public:
     using iterator = decltype(std::begin(std::declval<Container&>()));
 
-    explicit OrderStatisticAlgorithm(Container& data)
-        : begin_(std::begin(data)), end_(std::end(data)) {
-        /*
-         * Автор: Victor Khlyupin
-         * Принимает: data — выборка, границы которой запоминает алгоритм.
-         * Возвращает: ничего.
-         */
-    }
-
     virtual ~OrderStatisticAlgorithm() = default;
 
-    // ranks — нулевые ранги. Размер и порядок результата совпадают с ranks:
-    // result[i] указывает на статистику ранга ranks[i].
-    virtual std::vector<iterator> sort(const std::vector<std::size_t>& ranks) = 0;
-
 protected:
-    iterator begin_;
-    iterator end_;
+    OrderStatisticAlgorithm() = default;
+};
+
+// Точный поиск. ranks — ранги от 1 до n, result[i] — статистика ранга ranks[i].
+// Контейнер не копируется, алгоритм может переставлять элементы.
+template <typename Container>
+class ExactOrderStatisticAlgorithm : public OrderStatisticAlgorithm<Container> {
+public:
+    using iterator = typename OrderStatisticAlgorithm<Container>::iterator;
+
+    virtual std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks) = 0;
+};
+
+// Приближённый поиск. Возвращает один итератор на элемент выборки.
+// eps — доля n, допустимое отклонение ранга. delta — вероятность ошибки.
+// seed задаёт воспроизводимость.
+template <typename Container>
+class ApproximateOrderStatisticAlgorithm : public OrderStatisticAlgorithm<Container> {
+public:
+    using iterator = typename OrderStatisticAlgorithm<Container>::iterator;
+
+    virtual std::vector<iterator> sort(Container& data, std::size_t rank, double eps, double delta,
+                                       std::uint64_t seed) = 0;
 };
 
 } // namespace rapid_stats
