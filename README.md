@@ -2,12 +2,12 @@
 
 Учебный проект на C++17: поиск порядковых статистик.
 
-Порядковая статистика ранга `k` — элемент, который стоял бы на позиции `k`, если упорядочить выборку. Ранг нулевой: `k = 0` — минимум, `k = n - 1` — максимум.
+Порядковая статистика ранга `k` — элемент, который стоял бы на позиции `k`, если упорядочить выборку. Ранг с единицы: `k = 1` — минимум, `k = n` — максимум, индекс в контейнере — `k - 1`.
 
-Код алгоритмов — каталог `algo/`. Базовый класс — `algo/order_statistic_algorithm.hpp`. Любой алгоритм наследуется от `rapid_stats::OrderStatisticAlgorithm` и переопределяет `sort`. Сборка — `CMakeLists.txt`.
+Код алгоритмов — каталог `algo/`. Базовые классы — `algo/order_statistic_algorithm.hpp`. Конкретный алгоритм наследуется от `rapid_stats::ExactOrderStatisticAlgorithm` или `rapid_stats::ApproximateOrderStatisticAlgorithm` и переопределяет `sort`. Сборка — `CMakeLists.txt`.
 
 ```text
-algo/order_statistic_algorithm.hpp  абстрактный класс
+algo/order_statistic_algorithm.hpp  базовые классы
 check_function_comments.py          комментарий в теле функции
 CMakeLists.txt                      сборка
 AGENTS.md                           правила для агентов
