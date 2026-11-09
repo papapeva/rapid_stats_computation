@@ -204,20 +204,24 @@ private:
             static_cast<long double>(n)
         );
 
-        const std::size_t j =
-            static_cast<std::size_t>(raw_j);
+        const std::size_t j = std::clamp(
+            static_cast<std::size_t>(raw_j),
+            std::size_t{1},
+            m
+        );
 
         std::mt19937_64 rng(seed);
-
-        std::uniform_int_distribution<std::size_t>
-            index_dist(0, n - 1);
 
         std::vector<T> sample;
         sample.reserve(m);
 
-        for (std::size_t i = 0; i < m; ++i) {
-            sample.push_back(a[index_dist(rng)]);
-        }
+        std::sample(
+            a.begin(),
+            a.end(),
+            std::back_inserter(sample),
+            m,
+            rng
+        );
 
         return select_exact(sample, j - 1);
     }
