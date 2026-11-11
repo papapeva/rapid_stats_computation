@@ -30,7 +30,7 @@ public:
     virtual std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks) = 0;
 };
 
-// Приближённый поиск. ranks — ранги от 1 до n, result[i] — приближение статистики ranks[i].
+// Приближённый поиск. Возвращает один итератор на элемент выборки.
 // eps — доля n, допустимое отклонение ранга. delta — вероятность ошибки.
 // seed задаёт воспроизводимость.
 template <typename Container>
@@ -38,8 +38,8 @@ class ApproximateOrderStatisticAlgorithm : public OrderStatisticAlgorithm<Contai
 public:
     using iterator = typename OrderStatisticAlgorithm<Container>::iterator;
 
-    virtual std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks,
-                                       double eps, double delta, std::uint64_t seed) = 0;
+    virtual std::vector<iterator> sort(Container& data, std::size_t rank, double eps, double delta,
+                                       std::uint64_t seed) = 0;
 };
 
 } // namespace rapid_stats

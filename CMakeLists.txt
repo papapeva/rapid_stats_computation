@@ -17,14 +17,12 @@ target_include_directories(rapid_stats INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(rapid_stats INTERFACE cxx_std_17)
 target_sources(rapid_stats INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_algorithm.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_checker.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/approx_median.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/floyd_rivest.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/random_sampling.hpp)
 
 set(FORMAT_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_algorithm.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/algo/order_statistic_checker.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/approx_median.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/floyd_rivest.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/random_sampling.hpp

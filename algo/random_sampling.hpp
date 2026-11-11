@@ -21,12 +21,12 @@ public:
     using iterator = typename ApproximateOrderStatisticAlgorithm<Container>::iterator;
     using value_type = typename std::iterator_traits<iterator>::value_type;
 
-    std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks, double eps,
-                               double delta, std::uint64_t seed) override {
+    std::vector<iterator> sort(Container& data, std::size_t rank, double eps, double delta,
+                               std::uint64_t seed) override {
         /*
          * Автор: Valeriya Sokolova
-         * Принимает: data — выборка, ranks — ранги от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
-         * Возвращает: итераторы приближённых статистик в порядке ranks.
+         * Принимает: data — выборка, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
+         * Возвращает: вектор из одного итератора на элемент выборки.
          */
         if (!(eps > 0.0 && eps < 1.0) || !std::isfinite(eps)) {
             throw std::invalid_argument("eps must be in (0, 1)");
@@ -43,39 +43,25 @@ public:
 
         const std::size_t n = static_cast<std::size_t>(distance);
 
-        if (ranks.empty()) {
-            return {};
+        if (n == 0 || rank < 1 || rank > n) {
+            throw std::out_of_range("Rank must be in [1, n]");
         }
 
-        for (const std::size_t rank : ranks) {
-            if (n == 0 || rank < 1 || rank > n) {
-                throw std::out_of_range("Rank must be in [1, n]");
-            }
+        std::vector<value_type> values(std::begin(data), std::end(data));
+        const value_type selected = sample(values, rank, eps, delta, seed);
+
+        iterator found = std::begin(data);
+        const iterator end = std::end(data);
+
+        while (found != end && !(*found == selected)) {
+            ++found;
         }
 
-        const std::vector<value_type> values(std::begin(data), std::end(data));
-        std::vector<iterator> result;
-        result.reserve(ranks.size());
-
-        for (const std::size_t rank : ranks) {
-            std::vector<value_type> working = values;
-            const value_type selected = sample(working, rank, eps, delta, seed);
-
-            iterator found = std::begin(data);
-            const iterator end = std::end(data);
-
-            while (found != end && !(*found == selected)) {
-                ++found;
-            }
-
-            if (found == end) {
-                throw std::logic_error("Selected value is missing from the container");
-            }
-
-            result.push_back(found);
+        if (found == end) {
+            throw std::logic_error("Selected value is missing from the container");
         }
 
-        return result;
+        return {found};
     }
 
 private:

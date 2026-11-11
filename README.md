@@ -8,7 +8,6 @@
 
 ```text
 algo/order_statistic_algorithm.hpp  базовые классы
-algo/order_statistic_checker.hpp    выборка и проверка алгоритма
 algo/approx_median.hpp              приближённая медиана
 algo/floyd_rivest.hpp               точный Floyd–Rivest
 algo/random_sampling.hpp            приближённая случайная выборка
