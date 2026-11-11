@@ -53,13 +53,28 @@ Partition floyd_rivest_select(std::vector<T>& data, std::size_t left, std::size_
                 sd = -sd;
             }
 
-            const auto sample_left = static_cast<std::size_t>(
-                std::max(static_cast<double>(left),
-                         std::floor(static_cast<double>(index) - i * s / size + sd)));
+            const double sample_left_value = std::max(
+                static_cast<double>(left),
+                std::min(
+                    static_cast<double>(index),
+                    std::floor(static_cast<double>(index) - i * s / size + sd)
+                )
+            );
 
-            const auto sample_right = static_cast<std::size_t>(
-                std::min(static_cast<double>(right),
-                         std::floor(static_cast<double>(index) + (size - i) * s / size + sd)));
+            const double sample_right_value = std::min(
+                static_cast<double>(right),
+                std::max(
+                    static_cast<double>(index),
+                    std::floor(static_cast<double>(index) +
+                            (size - i) * s / size + sd)
+                )
+            );
+
+            const std::size_t sample_left =
+                static_cast<std::size_t>(sample_left_value);
+
+            const std::size_t sample_right =
+                static_cast<std::size_t>(sample_right_value);
 
             floyd_rivest_select(data, sample_left, sample_right, index, comp);
         }
