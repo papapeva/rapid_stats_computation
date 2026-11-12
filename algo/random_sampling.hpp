@@ -96,7 +96,7 @@ private:
                              double delta, std::mt19937_64& rng) {
         /*
          * Автор: Valeriya Sokolova
-         * Принимает: values — копия выборки, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
+         * Принимает: values — копия выборки, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, rng — генератор.
          * Возвращает: значение приближённой порядковой статистики.
          */
         const std::size_t n = values.size();

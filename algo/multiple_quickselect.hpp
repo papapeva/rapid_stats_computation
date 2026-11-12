@@ -7,10 +7,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <random>
 #include <stdexcept>
 #include <type_traits>
-#include <optional>
 #include <utility>
 #include <vector>
 
@@ -25,13 +25,11 @@ public:
     using value_type = typename std::iterator_traits<iterator>::value_type;
     using difference_type = typename std::iterator_traits<iterator>::difference_type;
 
-    std::vector<value_type> sort(Container& data,
-                                 const std::vector<std::size_t>& ranks,
+    std::vector<value_type> sort(Container& data, const std::vector<std::size_t>& ranks,
                                  std::uint64_t seed) {
         /*
          * Автор: Valeriya Sokolova
-         * Принимает: data — изменяемая выборка, ranks — ранги от 1 до n,
-         * seed — начальное состояние генератора случайных чисел.
+         * Принимает: data — выборка, ranks — ранги от 1 до n, seed — зерно генератора.
          * Возвращает: значения порядковых статистик в порядке ranks.
          */
         const auto distance = std::distance(std::begin(data), std::end(data));
@@ -57,10 +55,14 @@ public:
         }
 
         if constexpr (std::is_same_v<std::remove_cv_t<value_type>, double>) {
+            /*
+             * Автор: Valeriya Sokolova
+             * Принимает: ветвь для типа double.
+             * Возвращает: ничего; неконечные значения отклоняются до перестановок.
+             */
             for (auto it = std::begin(data); it != std::end(data); ++it) {
                 if (!std::isfinite(*it)) {
-                    throw std::invalid_argument(
-                        "Array must contain only finite double values");
+                    throw std::invalid_argument("Array must contain only finite double values");
                 }
             }
         }
@@ -79,10 +81,14 @@ public:
         }
 
         // Сортируем запросы по возрастанию ранга.
-        std::sort(queries.begin(), queries.end(),
-                  [](const Query& lhs, const Query& rhs) {
-                      return lhs.rank < rhs.rank;
-                  });
+        std::sort(queries.begin(), queries.end(), [](const Query& lhs, const Query& rhs) {
+            /*
+             * Автор: Valeriya Sokolova
+             * Принимает: lhs и rhs — запросы с рангами.
+             * Возвращает: истину, если ранг lhs меньше ранга rhs.
+             */
+            return lhs.rank < rhs.rank;
+        });
 
         // Генератор создаётся один раз на весь запуск.
         std::mt19937_64 rng(seed);
@@ -124,34 +130,37 @@ public:
 
             // Случайно выбираем опорный элемент.
             const std::size_t pivot_index = random_index(rng, lo, hi);
-            const value_type pivot =
-                *(first + static_cast<difference_type>(pivot_index));
+            const value_type pivot = *(first + static_cast<difference_type>(pivot_index));
 
             // Разбиваем текущую часть на три группы.
             const auto [lt, gt] = partition3(first, lo, hi, pivot);
 
             // Определяем запросы, попавшие в группу равных элементов.
-            const auto u_it = std::lower_bound(
-                queries.begin() + static_cast<std::ptrdiff_t>(b),
-                queries.begin() + static_cast<std::ptrdiff_t>(e),
-                lt + 1,
-                [](const Query& query, std::size_t rank) {
-                    return query.rank < rank;
-                });
+            const auto u_it = std::lower_bound(queries.begin() + static_cast<std::ptrdiff_t>(b),
+                                               queries.begin() + static_cast<std::ptrdiff_t>(e),
+                                               lt + 1, [](const Query& query, std::size_t rank) {
+                                                   /*
+                     * Автор: Valeriya Sokolova
+                     * Принимает: query — запрос, rank — граница ранга.
+                     * Возвращает: истину, если ранг запроса меньше rank.
+                     */
+                                                   return query.rank < rank;
+                                               });
 
-            const auto v_it = std::upper_bound(
-                queries.begin() + static_cast<std::ptrdiff_t>(b),
-                queries.begin() + static_cast<std::ptrdiff_t>(e),
-                gt + 1,
-                [](std::size_t rank, const Query& query) {
-                    return rank < query.rank;
-                });
+            const auto v_it = std::upper_bound(queries.begin() + static_cast<std::ptrdiff_t>(b),
+                                               queries.begin() + static_cast<std::ptrdiff_t>(e),
+                                               gt + 1, [](std::size_t rank, const Query& query) {
+                                                   /*
+                     * Автор: Valeriya Sokolova
+                     * Принимает: rank — граница ранга, query — запрос.
+                     * Возвращает: истину, если rank меньше ранга запроса.
+                     */
+                                                   return rank < query.rank;
+                                               });
 
-            const std::size_t u =
-                static_cast<std::size_t>(u_it - queries.begin());
+            const std::size_t u = static_cast<std::size_t>(u_it - queries.begin());
 
-            const std::size_t v =
-                static_cast<std::size_t>(v_it - queries.begin());
+            const std::size_t v = static_cast<std::size_t>(v_it - queries.begin());
 
             // Все ранги из равной части уже найдены.
             for (std::size_t j = u; j < v; ++j) {
@@ -174,11 +183,15 @@ public:
         result.reserve(ranks.size());
 
         for (const std::size_t rank : ranks) {
-            const auto it = std::lower_bound(
-                queries.begin(), queries.end(), rank,
-                [](const Query& query, std::size_t value) {
-                    return query.rank < value;
-                });
+            const auto it = std::lower_bound(queries.begin(), queries.end(), rank,
+                                             [](const Query& query, std::size_t value) {
+                                                 /*
+                     * Автор: Valeriya Sokolova
+                     * Принимает: query — запрос, value — запрошенный ранг.
+                     * Возвращает: истину, если ранг запроса меньше value.
+                     */
+                                                 return query.rank < value;
+                                             });
 
             if (it == queries.end() || it->rank != rank || !it->value) {
                 throw std::logic_error("Requested rank was not found");
@@ -192,9 +205,12 @@ public:
 
 private:
     // Равномерный случайный выбор индекса из [lo, hi].
-    static std::size_t random_index(std::mt19937_64& rng,
-                                    std::size_t lo,
-                                    std::size_t hi) {
+    static std::size_t random_index(std::mt19937_64& rng, std::size_t lo, std::size_t hi) {
+        /*
+         * Автор: Valeriya Sokolova
+         * Принимает: rng — генератор, lo и hi — границы диапазона включительно.
+         * Возвращает: случайный индекс из [lo, hi].
+         */
         std::uniform_int_distribution<std::size_t> distribution(lo, hi);
         return distribution(rng);
     }
@@ -203,16 +219,11 @@ private:
     // [lo, lt) — меньше pivot.
     // [lt, gt] — равно pivot.
     // (gt, hi] — больше pivot.
-    static std::pair<std::size_t, std::size_t> partition3(
-        iterator first,
-        std::size_t lo,
-        std::size_t hi,
-        const value_type& pivot) {
-
+    static std::pair<std::size_t, std::size_t> partition3(iterator first, std::size_t lo,
+                                                          std::size_t hi, const value_type& pivot) {
         /*
          * Автор: Valeriya Sokolova
-         * Принимает: first — начало массива, lo и hi — границы участка,
-         * pivot — опорное значение.
+         * Принимает: first — начало массива, lo и hi — границы, pivot — опора.
          * Возвращает: границы группы элементов, равных опоре.
          */
 
@@ -234,10 +245,7 @@ private:
             }
         }
 
-        return {
-            static_cast<std::size_t>(lt),
-            static_cast<std::size_t>(gt)
-        };
+        return {static_cast<std::size_t>(lt), static_cast<std::size_t>(gt)};
     }
 };
 
