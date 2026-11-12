@@ -93,7 +93,7 @@ private:
     }
 
     static value_type sample(const std::vector<value_type>& values, std::size_t rank, double eps,
-                             double delta, std::mt19937_64& rng) {
+                            double delta, std::mt19937_64& rng) {
         /*
          * Автор: Valeriya Sokolova
          * Принимает: values — копия выборки, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
@@ -123,9 +123,9 @@ private:
             return exact_at(working, index);
         }
 
-        const long double raw_j = std::ceil(
-            static_cast<long double>(m) * static_cast<long double>(rank) /
-            static_cast<long double>(n));
+        const long double raw_j =
+        std::ceil(static_cast<long double>(m) * static_cast<long double>(rank) /
+                static_cast<long double>(n));
 
         std::size_t j = static_cast<std::size_t>(raw_j);
 
