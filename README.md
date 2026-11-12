@@ -12,6 +12,7 @@ algo/order_statistic_checker.hpp    выборка и проверка алго�
 algo/approx_median.hpp              приближённая медиана
 algo/floyd_rivest.hpp               точный Floyd–Rivest
 algo/random_sampling.hpp            приближённая случайная выборка
+bench/order_statistic_benchmark.hpp замер времени и ошибки ранга
 check_function_comments.py          комментарий в теле функции
 CMakeLists.txt                      сборка
 AGENTS.md                           правила для агентов
@@ -186,3 +187,37 @@ cmake --build build --target tidy
 Отдельно прогоняются один квантиль `0.75` и пустой запрос. Сравнение идёт по значениям
 последнего запуска. CI запускает Debug с AddressSanitizer/UndefinedBehaviorSanitizer
 и Release. Для GCC/Clang санитайзеры включаются параметром `-DRAPID_STATS_SANITIZERS=ON`.
+
+## Как тестировать алгоритм
+
+`rapid_stats::OrderStatisticBenchmark` (`bench/order_statistic_benchmark.hpp`) один раз строит выборку `std::vector<std::int64_t>`. На каждый запуск алгоритм получает её копию. Копирование и проверка ранга в замер не входят.
+
+Класс алгоритма наследуется от `ExactOrderStatisticAlgorithm` или `ApproximateOrderStatisticAlgorithm` и переопределяет `sort`. В вызове контейнер — `rapid_stats::BenchmarkSample`. Доли от 0 до 1 бенчмарк переводит в ранги с единицы: `1 + round(доля * (n - 1))`.
+
+```cpp
+#include "floyd_rivest.hpp"
+#include "order_statistic_benchmark.hpp"
+
+rapid_stats::FloydRivestSelect<rapid_stats::BenchmarkSample> algorithm;
+rapid_stats::OrderStatisticBenchmark benchmark(100000, rapid_stats::SamplePattern::Random, 1);
+const auto result = benchmark.exact(algorithm, {0, 0.5, 1}, 5);
+```
+
+`result.median_ms` — медиана времени, `result.values` — ответы последнего запуска в порядке долей. Сверку с эталоном делает сам прогон: `exact` только измеряет и возвращает значения.
+
+Приближённый алгоритм вызывается так:
+
+```cpp
+const auto result = benchmark.approximate(algorithm, {0.5}, 0.05, 0.05, 1, 11);
+```
+
+Аргументы после долей: `eps`, `delta`, первое зерно, число запусков. Зёрна идут подряд: `seed`, `seed + 1`, … `result.p95_error` — 95-й процентиль относительной ошибки ранга, `result.failure_rate` — доля запусков, где ошибка больше `eps`.
+
+Вид выборки задаёт `SamplePattern`: `Random`, `Ascending`, `Descending`, `AlmostSorted`, `ManyDuplicates`, `AllEqual`, `TwoValuesBalanced`, `TwoValuesSkewed`, `UpThenDown`, `FullInt64`, `SameHighBytes`, `LowByteOnly`.
+
+Новый прогон — файл в `bench/` и цель в `CMakeLists.txt` по образцу `bench_floyd_rivest`: каталог заголовков `algo/`, связь с `rapid_stats`. Готовые вызовы — `bench/bench_floyd_rivest.cpp` и `bench/bench_exact_algorithms.cpp`.
+
+```text
+cmake --build build --target bench_floyd_rivest
+./build/bench_floyd_rivest
+```
