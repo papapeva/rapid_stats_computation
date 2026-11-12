@@ -27,18 +27,18 @@ template <typename Iterator> bool approx_iterator_less(const Iterator& lhs, cons
 
 } // namespace detail
 
-// Приближённая медиана по случайной выборке. Возвращает один элемент исходного контейнера.
+// Приближённая медиана по случайной выборке. На каждый ранг — элемент исходного контейнера.
 template <typename Container>
 class ApproxMedianAlgorithm : public ApproximateOrderStatisticAlgorithm<Container> {
 public:
     using iterator = typename ApproximateOrderStatisticAlgorithm<Container>::iterator;
 
-    std::vector<iterator> sort(Container& data, std::size_t rank, double eps, double delta,
-                               std::uint64_t seed) override {
+    std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks, double eps,
+                               double delta, std::uint64_t seed) override {
         /*
          * Автор: Valeriya Sokolova
-         * Принимает: data — выборка, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
-         * Возвращает: вектор из одного итератора на элемент выборки.
+         * Принимает: data — выборка, ranks — ранги от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
+         * Возвращает: итераторы приближённых статистик в порядке ranks.
          */
         if (!(eps > 0.0 && eps < 1.0)) {
             throw std::invalid_argument("eps must be in (0, 1)");
@@ -55,14 +55,18 @@ public:
 
         const std::size_t n = static_cast<std::size_t>(distance);
 
-        if (n == 0 || rank < 1 || rank > n) {
-            throw std::out_of_range("Rank must be in [1, n]");
+        if (ranks.empty()) {
+            return {};
         }
 
-        const std::size_t index = rank - 1;
+        for (const std::size_t rank : ranks) {
+            if (n == 0 || rank < 1 || rank > n) {
+                throw std::out_of_range("Rank must be in [1, n]");
+            }
+        }
 
         if (n == 1) {
-            return {std::begin(data)};
+            return std::vector<iterator>(ranks.size(), std::begin(data));
         }
 
         // Надёжность c = ln(1 / delta) / ln(n), размер выборки 4 * c * ln(n) / eps^2.
@@ -107,20 +111,28 @@ public:
 
         std::sort(sample.begin(), sample.end(), detail::approx_iterator_less<iterator>);
 
-        std::size_t sample_rank = index;
+        std::vector<iterator> result;
+        result.reserve(ranks.size());
 
-        if (sample_size < n) {
-            const long double position = static_cast<long double>(index) /
-                                         static_cast<long double>(n) *
-                                         static_cast<long double>(sample_size - 1);
-            sample_rank = static_cast<std::size_t>(std::llround(position));
+        for (const std::size_t rank : ranks) {
+            const std::size_t index = rank - 1;
+            std::size_t sample_rank = index;
 
-            if (sample_rank >= sample_size) {
-                sample_rank = sample_size - 1;
+            if (sample_size < n) {
+                const long double position = static_cast<long double>(index) /
+                                             static_cast<long double>(n) *
+                                             static_cast<long double>(sample_size - 1);
+                sample_rank = static_cast<std::size_t>(std::llround(position));
+
+                if (sample_rank >= sample_size) {
+                    sample_rank = sample_size - 1;
+                }
             }
+
+            result.push_back(sample[sample_rank]);
         }
 
-        return {sample[sample_rank]};
+        return result;
     }
 };
 
