@@ -11,7 +11,7 @@ permissions:
 jobs:
   pr-title:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check pull request title
         env:
@@ -26,11 +26,19 @@ jobs:
           fi
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build_type: Debug
+            sanitizers: ON
+          - build_type: Release
+            sanitizers: OFF
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -43,7 +51,8 @@ jobs:
       - name: Configure
         run: >
           cmake -S . -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DRAPID_STATS_SANITIZERS=${{ matrix.sanitizers }}
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Check formatting
@@ -51,6 +60,9 @@ jobs:
 
       - name: Build
         run: cmake --build build
+
+      - name: Test algorithms
+        run: ctest --test-dir build --output-on-failure
 
       - name: Clang-tidy
         run: cmake --build build --target tidy

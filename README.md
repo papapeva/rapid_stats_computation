@@ -12,6 +12,7 @@ algo/order_statistic_checker.hpp    выборка и проверка алго�
 algo/approx_median.hpp              приближённая медиана
 algo/floyd_rivest.hpp               точный Floyd–Rivest
 algo/random_sampling.hpp            приближённая случайная выборка
+bench/order_statistic_benchmark.hpp замер времени и ошибки ранга
 check_function_comments.py          комментарий в теле функции
 CMakeLists.txt                      сборка
 AGENTS.md                           правила для агентов
@@ -91,4 +92,132 @@ void example(int value) {
 
 ```text
 pip install clang-format==18.1.8
+```
+
+## Реализованные алгоритмы
+
+### Где находится полный код
+
+Публичные заголовки подключают реализации из `algo/detail/`. Эти файлы входят в
+репозиторий и pull request; отдельной загрузки или внешней библиотеки не требуется.
+
+| Алгоритм | Публичный класс | Полная реализация |
+|---|---|---|
+| BFPRT | [bfprt.hpp](algo/bfprt.hpp) | [bfprt_impl.hpp](algo/detail/bfprt_impl.hpp): группы по пять, рекурсивная медиана медиан, трёхстороннее разбиение |
+| Radix Select | [radix_select.hpp](algo/radix_select.hpp) | [radix_impl.hpp](algo/detail/radix_impl.hpp): ключи, общее MSD-разбиение и совместный выбор рангов |
+| Partial Quicksort | [partial_quicksort.hpp](algo/partial_quicksort.hpp) | [partial_quicksort_impl.hpp](algo/detail/partial_quicksort_impl.hpp): случайная опора, разбиение и сортировка префикса |
+
+Добавлены три семейства ранее проверенных алгоритмов. Все классы наследуются от
+`ExactOrderStatisticAlgorithm<Container>` и используют **ранги с единицы**, как базовый интерфейс.
+Конкретные реализации принимают обычный изменяемый `std::vector<T>` со стандартным аллокатором.
+Массив передаётся в `sort(data, ranks)`; один объект можно использовать для разных массивов.
+
+| Заголовок | Класс | Поведение |
+|---|---|---|
+| `algo/bfprt.hpp` | `rapid_stats::BfprtAlgorithm` | Медиана медиан, группы по пять, трёхстороннее разбиение |
+| `algo/radix_select.hpp` | `rapid_stats::RadixSelectAlgorithm` | Выбор по байтам без полной сортировки |
+| `algo/partial_quicksort.hpp` | `rapid_stats::PartialQuicksortAlgorithm` | Сортировка минимального префикса, покрывающего запрошенные ранги |
+
+`sort(data, ranks)` возвращает итераторы в том же порядке, что и `ranks`. Повторяющиеся ранги
+допустимы. Пустой запрос ничего не меняет, в том числе на пустом массиве. Недопустимый
+ранг вызывает `std::out_of_range` до перестановок. Неконечные вещественные значения
+отклоняются при непустом запросе; нули обоих знаков считаются равными.
+
+```cpp
+#include "algo/bfprt.hpp"
+
+std::vector<std::int64_t> data{9, -1, 5, 3, -7, 3, 8};
+rapid_stats::BfprtAlgorithm<std::vector<std::int64_t>> algorithm;
+auto result = algorithm.sort(data, {4, 1, 4});
+// *result[0] == 3, *result[1] == -7, *result[2] == 3.
+```
+
+Итераторы предназначены для чтения результатов после завершения текущего вызова.
+Новый вызов или изменение массива может переставить элементы под ранее полученными итераторами.
+Все три алгоритма возвращают `begin()+(rank-1)`. Даже равные значения разных рангов
+имеют разные позиции; одинаковый повторный ранг возвращает тот же итератор.
+Radix Select обрабатывает все ранги совместно: сначала распределяет диапазон по
+старшему байту, затем уточняет только корзины с запросами. Ненужные корзины не
+сортируются по младшим байтам. При запросе всех рангов весь массив неизбежно
+становится отсортированным, но отдельного алгоритма полной сортировки в этом PR нет.
+
+Для Partial Quicksort также доступен `sort_prefix(data, m)`, где `m` — **количество**, от 0 до n.
+`m=0` ничего не меняет; `m=n` полностью сортирует массив. После вызова первые m элементов
+совпадают с префиксом отсортированной копии, хвост не содержит значений меньше `data[m-1]`.
+
+BFPRT и Partial Quicksort поддерживают обычные числовые типы, кроме bool.
+Radix Select поддерживает `std::int64_t`, `std::uint64_t` и конечные IEEE 754 binary64
+`double`. Ключи учитывают знак; для double биты извлекаются через memcpy, без нарушения алиасности.
+
+### Сложность
+
+- BFPRT: O(n) в худшем случае для одного ранга. Несколько уникальных рангов выбираются
+  по возрастанию на оставшемся суффиксе, чтобы не менять ранее установленную статистику.
+- Radix Select: q запросов сортируются и дедуплицируются за O(q log q).
+  На каждом из максимум 8 уровней диапазоны не пересекаются: не более n элементов
+  учитываются в гистограммах и не более n шагов распределения. Для B обработанных
+  диапазонов время O(q log q + 8(n+q) + 256B); B <= 8n, поэтому при фиксированной
+  ширине ключа это O(n + q log q). Это не q отдельных выборов по всему массиву.
+  Дополнительная память O(q + 8*256): позиции запросов и фиксированные таблицы
+  на стеке глубиной не более 8. Массив данных не копируется. Для одного ранга — O(n)
+  времени и O(256) памяти при фиксированной ширине ключа.
+- Partial Quicksort: ожидаемое O(n+m log m), худшее O(n²), стек O(log n), где
+  m=max(ranks). Случайный pivot и трёхстороннее разбиение; seed по умолчанию 20261105.
+
+Оценки памяти не включают обязательный вектор возвращаемых итераторов.
+Внутренние ядра находятся в `algo/detail/`; их собственная индексация адаптирована
+к публичным рангам с единицы. Вызывайте публичные классы, а не функции из `detail`.
+
+### Проверка реализации
+
+`bench/bench_exact_algorithms.cpp` гоняет BFPRT, Radix Select и Partial Quicksort
+через `OrderStatisticBenchmark` и сверяет ответы с `std::nth_element` на той же выборке.
+Один набор долей уходит в `sort` одним вызовом. `ctest` запускает этот бенчмарк.
+
+```text
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+ctest --test-dir build --output-on-failure
+cmake --build build --target format-check
+cmake --build build --target tidy
+```
+
+Проверяются виды выборок бенчмарка: случайная, монотонная, почти отсортированная,
+с повторами, весь `int64`, общие старшие байты и различие только в младшем байте.
+Отдельно прогоняются один квантиль `0.75` и пустой запрос. Сравнение идёт по значениям
+последнего запуска. CI запускает Debug с AddressSanitizer/UndefinedBehaviorSanitizer
+и Release. Для GCC/Clang санитайзеры включаются параметром `-DRAPID_STATS_SANITIZERS=ON`.
+
+## Как тестировать алгоритм
+
+`rapid_stats::OrderStatisticBenchmark` (`bench/order_statistic_benchmark.hpp`) один раз строит выборку `std::vector<std::int64_t>`. На каждый запуск алгоритм получает её копию. Копирование и проверка ранга в замер не входят.
+
+Класс алгоритма наследуется от `ExactOrderStatisticAlgorithm` или `ApproximateOrderStatisticAlgorithm` и переопределяет `sort`. В вызове контейнер — `rapid_stats::BenchmarkSample`. Доли от 0 до 1 бенчмарк переводит в ранги с единицы: `1 + round(доля * (n - 1))`.
+
+```cpp
+#include "floyd_rivest.hpp"
+#include "order_statistic_benchmark.hpp"
+
+rapid_stats::FloydRivestSelect<rapid_stats::BenchmarkSample> algorithm;
+rapid_stats::OrderStatisticBenchmark benchmark(100000, rapid_stats::SamplePattern::Random, 1);
+const auto result = benchmark.exact(algorithm, {0, 0.5, 1}, 5);
+```
+
+`result.median_ms` — медиана времени, `result.values` — ответы последнего запуска в порядке долей. Сверку с эталоном делает сам прогон: `exact` только измеряет и возвращает значения.
+
+Приближённый алгоритм вызывается так:
+
+```cpp
+const auto result = benchmark.approximate(algorithm, {0.5}, 0.05, 0.05, 1, 11);
+```
+
+Аргументы после долей: `eps`, `delta`, первое зерно, число запусков. Зёрна идут подряд: `seed`, `seed + 1`, … `result.p95_error` — 95-й процентиль относительной ошибки ранга, `result.failure_rate` — доля запусков, где ошибка больше `eps`.
+
+Вид выборки задаёт `SamplePattern`: `Random`, `Ascending`, `Descending`, `AlmostSorted`, `ManyDuplicates`, `AllEqual`, `TwoValuesBalanced`, `TwoValuesSkewed`, `UpThenDown`, `FullInt64`, `SameHighBytes`, `LowByteOnly`.
+
+Новый прогон — файл в `bench/` и цель в `CMakeLists.txt` по образцу `bench_floyd_rivest`: каталог заголовков `algo/`, связь с `rapid_stats`. Готовые вызовы — `bench/bench_floyd_rivest.cpp` и `bench/bench_exact_algorithms.cpp`.
+
+```text
+cmake --build build --target bench_floyd_rivest
+./build/bench_floyd_rivest
 ```
