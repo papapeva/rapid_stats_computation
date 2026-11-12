@@ -19,10 +19,9 @@ file(GLOB_RECURSE ALGORITHM_HEADERS CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/algo/*.hpp)
 target_sources(rapid_stats INTERFACE ${ALGORITHM_HEADERS})
 
-# QUI-19 headers stay out of format/tidy until RangeQuickselect
-# overrides the current approximate sort signature.
+# QuickselectAdaptive comments sit outside function bodies, so format/tidy skip it.
 set(CHECKED_HEADERS ${ALGORITHM_HEADERS})
-list(FILTER CHECKED_HEADERS EXCLUDE REGEX "quickselect_adaptive\\.hpp$|range_quickselect\\.hpp$")
+list(FILTER CHECKED_HEADERS EXCLUDE REGEX "quickselect_adaptive\\.hpp$")
 
 add_executable(bench_floyd_rivest
     ${CMAKE_CURRENT_SOURCE_DIR}/bench/bench_floyd_rivest.cpp)
