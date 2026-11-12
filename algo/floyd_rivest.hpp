@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "order_statistic_algorithm.hpp"
@@ -21,8 +20,7 @@ struct Partition {
     std::size_t equal_end;
 };
 
-template <typename Iterator>
-bool iterator_less(const Iterator& lhs, const Iterator& rhs) {
+template <typename Iterator> bool iterator_less(const Iterator& lhs, const Iterator& rhs) {
     /*
      * Автор: Valeriya Sokolova
      * Принимает: lhs и rhs — итераторы сравниваемых элементов.
@@ -33,8 +31,8 @@ bool iterator_less(const Iterator& lhs, const Iterator& rhs) {
 
 // Выбор элемента ранга index в диапазоне [left, right]. Индекс нулевой.
 template <typename T, typename Compare>
-Partition floyd_rivest_select(std::vector<T>& data, std::size_t left,
-                              std::size_t right, std::size_t index, Compare comp) {
+Partition floyd_rivest_select(std::vector<T>& data, std::size_t left, std::size_t right,
+                              std::size_t index, Compare comp) {
     /*
      * Автор: Valeriya Sokolova
      * Принимает: data — элементы, left и right — границы, index — нулевой ранг, comp — сравнение.
@@ -55,19 +53,12 @@ Partition floyd_rivest_select(std::vector<T>& data, std::size_t left,
                 sd = -sd;
             }
 
-            const double sample_left_value =
-                std::max(static_cast<double>(left),
-                         std::min(static_cast<double>(index),
-                                  std::floor(static_cast<double>(index) - i * s / size + sd)));
-
-            const double sample_right_value =
-                std::min(static_cast<double>(right),
-                         std::max(static_cast<double>(index),
-                                  std::floor(static_cast<double>(index) +
-                                             (size - i) * s / size + sd)));
+            const double sample_left_value = std::max(static_cast<double>(left), std::min(static_cast<double>(index), std::floor(static_cast<double>(index) - i * s / size + sd)));
+            const double sample_right_value = std::min(static_cast<double>(right), std::max(static_cast<double>(index), std::floor(static_cast<double>(index) + (size - i) * s / size + sd)));
 
             const std::size_t sample_left =
                 static_cast<std::size_t>(sample_left_value);
+
             const std::size_t sample_right =
                 static_cast<std::size_t>(sample_right_value);
 
@@ -130,33 +121,29 @@ void select_multiple(std::vector<T>& data, const std::vector<std::size_t>& index
 
     const Partition partition = floyd_rivest_select(data, left, right, index, comp);
 
-    const auto first_right =
-        std::lower_bound(indexes.begin() + static_cast<std::ptrdiff_t>(index_begin),
-                         indexes.begin() + static_cast<std::ptrdiff_t>(index_end),
-                         partition.equal_begin);
+    const auto first_right = std::lower_bound(
+        indexes.begin() + static_cast<std::ptrdiff_t>(index_begin),
+        indexes.begin() + static_cast<std::ptrdiff_t>(index_end), partition.equal_begin);
 
-    const auto first_after_equal =
-        std::upper_bound(indexes.begin() + static_cast<std::ptrdiff_t>(index_begin),
-                         indexes.begin() + static_cast<std::ptrdiff_t>(index_end),
-                         partition.equal_end);
+    const auto first_after_equal = std::upper_bound(
+        indexes.begin() + static_cast<std::ptrdiff_t>(index_begin),
+        indexes.begin() + static_cast<std::ptrdiff_t>(index_end), partition.equal_end);
 
-    const std::size_t left_index_end =
-        static_cast<std::size_t>(first_right - indexes.begin());
-    const std::size_t right_index_begin =
-        static_cast<std::size_t>(first_after_equal - indexes.begin());
+    const std::size_t left_index_end = static_cast<std::size_t>(first_right - indexes.begin());
+    const std::size_t right_index_begin = static_cast<std::size_t>(first_after_equal - indexes.begin());
 
     if (left < partition.equal_begin && index_begin < left_index_end) {
-        select_multiple(data, indexes, index_begin, left_index_end, left,
-                        partition.equal_begin - 1, comp);
+        select_multiple(data, indexes, index_begin, left_index_end, left, partition.equal_begin - 1,
+                        comp);
     }
 
     if (partition.equal_end < right && right_index_begin < index_end) {
-        select_multiple(data, indexes, right_index_begin, index_end,
-                        partition.equal_end + 1, right, comp);
+        select_multiple(data, indexes, right_index_begin, index_end, partition.equal_end + 1, right,
+                        comp);
     }
 }
 
-}  // namespace detail
+} // namespace detail
 
 // Точный поиск Floyd–Rivest. Исходный контейнер не переставляет.
 template <typename Container>
@@ -164,8 +151,7 @@ class FloydRivestSelect : public ExactOrderStatisticAlgorithm<Container> {
 public:
     using iterator = typename ExactOrderStatisticAlgorithm<Container>::iterator;
 
-    std::vector<iterator> sort(Container& data,
-                               const std::vector<std::size_t>& ranks) override {
+    std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks) override {
         /*
          * Автор: Valeriya Sokolova
          * Принимает: data — выборка, ranks — ранги от 1 до n.
@@ -190,7 +176,6 @@ public:
             if (rank < 1 || rank > n) {
                 throw std::out_of_range("Rank must be in [1, n]");
             }
-
             indexes.push_back(rank - 1);
         }
 
@@ -219,4 +204,4 @@ public:
     }
 };
 
-}  // namespace rapid_stats
+} // namespace rapid_stats

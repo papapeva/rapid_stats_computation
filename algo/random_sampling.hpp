@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "order_statistic_algorithm.hpp"
@@ -22,8 +21,8 @@ public:
     using iterator = typename ApproximateOrderStatisticAlgorithm<Container>::iterator;
     using value_type = typename std::iterator_traits<iterator>::value_type;
 
-    std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks,
-                               double eps, double delta, std::uint64_t seed) override {
+    std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks, double eps,
+                               double delta, std::uint64_t seed) override {
         /*
          * Автор: Valeriya Sokolova
          * Принимает: data — выборка, ranks — ранги от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
@@ -32,7 +31,6 @@ public:
         if (!(eps > 0.0 && eps < 1.0) || !std::isfinite(eps)) {
             throw std::invalid_argument("eps must be in (0, 1)");
         }
-
         if (!(delta > 0.0 && delta < 1.0) || !std::isfinite(delta)) {
             throw std::invalid_argument("delta must be in (0, 1)");
         }
@@ -94,8 +92,8 @@ private:
         return *nth;
     }
 
-    static value_type sample(const std::vector<value_type>& values, std::size_t rank,
-                             double eps, double delta, std::mt19937_64& rng) {
+    static value_type sample(const std::vector<value_type>& values, std::size_t rank, double eps,
+                             double delta, std::mt19937_64& rng) {
         /*
          * Автор: Valeriya Sokolova
          * Принимает: values — копия выборки, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
@@ -105,8 +103,7 @@ private:
         const std::size_t index = rank - 1;
 
         const long double epsilon = static_cast<long double>(eps);
-        const long double log_term =
-            std::log(2.0L) - std::log(static_cast<long double>(delta));
+        const long double log_term = std::log(2.0L) - std::log(static_cast<long double>(delta));
 
         const long double raw_m = log_term / (2.0L * epsilon * epsilon);
 
@@ -126,16 +123,15 @@ private:
             return exact_at(working, index);
         }
 
-        const long double raw_j =
-            std::ceil(static_cast<long double>(m) * static_cast<long double>(rank) /
-                      static_cast<long double>(n));
+        const long double raw_j = std::ceil(
+            static_cast<long double>(m) * static_cast<long double>(rank) /
+            static_cast<long double>(n));
 
         std::size_t j = static_cast<std::size_t>(raw_j);
 
         if (j < 1) {
             j = 1;
         }
-
         if (j > m) {
             j = m;
         }
@@ -153,4 +149,4 @@ private:
     }
 };
 
-}  // namespace rapid_stats
+} // namespace rapid_stats
