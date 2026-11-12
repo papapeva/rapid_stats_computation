@@ -66,8 +66,7 @@ public:
             iterator found = std::begin(data);
             const iterator end = std::end(data);
 
-            while (found != end &&
-                   (*found < selected || selected < *found)) {
+            while (found != end && (*found < selected || selected < *found)) {
                 ++found;
             }
 
@@ -124,8 +123,9 @@ private:
             return exact_at(working, index);
         }
 
-        const long double raw_j =
-            std::ceil(static_cast<long double>(m) * static_cast<long double>(rank) / static_cast<long double>(n));
+        const long double raw_j = std::ceil(
+            static_cast<long double>(m) * static_cast<long double>(rank) /
+            static_cast<long double>(n));
 
         std::size_t j = static_cast<std::size_t>(raw_j);
 
