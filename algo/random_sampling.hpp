@@ -104,11 +104,9 @@ private:
         const std::size_t index = rank - 1;
 
         const long double epsilon = static_cast<long double>(eps);
-        const long double log_term =
-            std::log(2.0L) - std::log(static_cast<long double>(delta));
+        const long double log_term = std::log(2.0L) - std::log(static_cast<long double>(delta));
 
-        const long double raw_m =
-            log_term / (2.0L * epsilon * epsilon);
+        const long double raw_m = log_term / (2.0L * epsilon * epsilon);
 
         if (!std::isfinite(raw_m) || raw_m >= static_cast<long double>(n)) {
             std::vector<value_type> working = values;
@@ -127,8 +125,7 @@ private:
         }
 
         const long double raw_j =
-            std::ceil(static_cast<long double>(m) * static_cast<long double>(rank) /
-                      static_cast<long double>(n));
+            std::ceil(static_cast<long double>(m) * static_cast<long double>(rank) / static_cast<long double>(n));
 
         std::size_t j = static_cast<std::size_t>(raw_j);
 
