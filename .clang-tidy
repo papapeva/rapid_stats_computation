@@ -16,5 +16,5 @@ Checks: >
   cppcoreguidelines-avoid-goto
 
 WarningsAsErrors: ''
-HeaderFilterRegex: 'order_statistic_algorithm\.hpp'
+HeaderFilterRegex: 'algo[/\\].*\.hpp'
 FormatStyle: none

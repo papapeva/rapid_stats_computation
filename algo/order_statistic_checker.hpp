@@ -16,7 +16,7 @@ public:
     OrderStatisticChecker(std::size_t size, std::uint64_t seed);
 
     std::vector<int>& data();
-    const std::vector<int>& data() const;
+    [[nodiscard]] const std::vector<int>& data() const;
 
     // Истина, если каждый возвращённый элемент равен статистике своего ранга.
     template <typename Algorithm>
@@ -28,8 +28,8 @@ public:
                            double delta, std::uint64_t seed);
 
 private:
-    bool points_into(std::vector<int>::const_iterator it) const;
-    std::size_t rank_error(int value, std::size_t rank) const;
+    [[nodiscard]] bool points_into(std::vector<int>::const_iterator it) const;
+    [[nodiscard]] std::size_t rank_error(int value, std::size_t rank) const;
 
     std::vector<int> data_;
 };
