@@ -34,8 +34,7 @@ bool iterator_less(const Iterator& lhs, const Iterator& rhs) {
 // Выбор элемента ранга index в диапазоне [left, right]. Индекс нулевой.
 template <typename T, typename Compare>
 Partition floyd_rivest_select(std::vector<T>& data, std::size_t left,
-                              std::size_t right, std::size_t index,
-                              Compare comp) {
+                              std::size_t right, std::size_t index, Compare comp) {
     /*
      * Автор: Valeriya Sokolova
      * Принимает: data — элементы, left и right — границы, index — нулевой ранг, comp — сравнение.
@@ -59,8 +58,7 @@ Partition floyd_rivest_select(std::vector<T>& data, std::size_t left,
             const double sample_left_value =
                 std::max(static_cast<double>(left),
                          std::min(static_cast<double>(index),
-                                  std::floor(static_cast<double>(index) -
-                                             i * s / size + sd)));
+                                  std::floor(static_cast<double>(index) - i * s / size + sd)));
 
             const double sample_right_value =
                 std::min(static_cast<double>(right),
@@ -115,10 +113,9 @@ Partition floyd_rivest_select(std::vector<T>& data, std::size_t left,
 
 // indexes отсортирован по возрастанию и содержит нулевые позиции.
 template <typename T, typename Compare>
-void select_multiple(std::vector<T>& data,
-                     const std::vector<std::size_t>& indexes,
-                     std::size_t index_begin, std::size_t index_end,
-                     std::size_t left, std::size_t right, Compare comp) {
+void select_multiple(std::vector<T>& data, const std::vector<std::size_t>& indexes,
+                     std::size_t index_begin, std::size_t index_end, std::size_t left,
+                     std::size_t right, Compare comp) {
     /*
      * Автор: Valeriya Sokolova
      * Принимает: data — элементы, indexes — нулевые ранги, границы рангов и диапазона, comp — сравнение.
@@ -131,8 +128,7 @@ void select_multiple(std::vector<T>& data,
     const std::size_t middle = index_begin + (index_end - index_begin) / 2;
     const std::size_t index = indexes[middle];
 
-    const Partition partition =
-        floyd_rivest_select(data, left, right, index, comp);
+    const Partition partition = floyd_rivest_select(data, left, right, index, comp);
 
     const auto first_right =
         std::lower_bound(indexes.begin() + static_cast<std::ptrdiff_t>(index_begin),
@@ -160,7 +156,7 @@ void select_multiple(std::vector<T>& data,
     }
 }
 
-} // namespace detail
+}  // namespace detail
 
 // Точный поиск Floyd–Rivest. Исходный контейнер не переставляет.
 template <typename Container>
@@ -194,6 +190,7 @@ public:
             if (rank < 1 || rank > n) {
                 throw std::out_of_range("Rank must be in [1, n]");
             }
+
             indexes.push_back(rank - 1);
         }
 
@@ -222,4 +219,4 @@ public:
     }
 };
 
-} // namespace rapid_stats
+}  // namespace rapid_stats
