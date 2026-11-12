@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "order_statistic_algorithm.hpp"
@@ -16,12 +17,14 @@ namespace rapid_stats {
 
 // Приближённый поиск случайной выборкой. Точный добор делает nth_element на копии.
 template <typename Container>
-class RandomSamplingAlgorithm : public ApproximateOrderStatisticAlgorithm<Container> {
+class RandomSamplingAlgorithm
+    : public ApproximateOrderStatisticAlgorithm<Container> {
 public:
     using iterator = typename ApproximateOrderStatisticAlgorithm<Container>::iterator;
     using value_type = typename std::iterator_traits<iterator>::value_type;
 
-    std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks, double eps,
+    std::vector<iterator> sort(Container& data,
+                               const std::vector<std::size_t>& ranks, double eps,
                                double delta, std::uint64_t seed) override {
         /*
          * Автор: Valeriya Sokolova
@@ -81,7 +84,8 @@ public:
     }
 
 private:
-    static value_type exact_at(std::vector<value_type>& values, std::size_t index) {
+    static value_type exact_at(std::vector<value_type>& values,
+                               std::size_t index) {
         /*
          * Автор: Valeriya Sokolova
          * Принимает: values — копия выборки, index — нулевой ранг.
@@ -92,18 +96,20 @@ private:
         return *nth;
     }
 
-    static value_type sample(const std::vector<value_type>& values, std::size_t rank, double eps,
-                            double delta, std::mt19937_64& rng) {
+    static value_type sample(const std::vector<value_type>& values,
+                             std::size_t rank, double eps, double delta,
+                             std::mt19937_64& rng) {
         /*
          * Автор: Valeriya Sokolova
-         * Принимает: values — копия выборки, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки, seed — зерно.
+         * Принимает: values — копия выборки, rank — ранг от 1 до n, eps — доля n, delta — вероятность ошибки.
          * Возвращает: значение приближённой порядковой статистики.
          */
         const std::size_t n = values.size();
         const std::size_t index = rank - 1;
 
         const long double epsilon = static_cast<long double>(eps);
-        const long double log_term = std::log(2.0L) - std::log(static_cast<long double>(delta));
+        const long double log_term =
+            std::log(2.0L) - std::log(static_cast<long double>(delta));
 
         const long double raw_m = log_term / (2.0L * epsilon * epsilon);
 
@@ -124,8 +130,9 @@ private:
         }
 
         const long double raw_j =
-        std::ceil(static_cast<long double>(m) * static_cast<long double>(rank) /
-                static_cast<long double>(n));
+            std::ceil(static_cast<long double>(m) *
+                      static_cast<long double>(rank) /
+                      static_cast<long double>(n));
 
         std::size_t j = static_cast<std::size_t>(raw_j);
 
