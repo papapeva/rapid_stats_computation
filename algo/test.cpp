@@ -80,7 +80,8 @@ void test_approximate_algorithm(
     const Data& reference,
     double eps,
     double delta,
-    std::uint64_t seed)
+    std::uint64_t seed,
+    rapid_stats::ExactOrderStatisticAlgorithm<Data>* exact_algorithm = nullptr)
 {
     Data data = source;
     const auto result = algorithm.sort(data, ranks, eps, delta, seed);
@@ -156,7 +157,8 @@ int main() {
 
     const Data source = make_data(data_size, data_seed);
     const Data reference = make_reference(source);
-
+    rapid_stats::FloydRivestSelect<std::vector<int>> exact;
+    
     try {
         // Floyd–Rivest: точный алгоритм.
         FloydRivestSelect<Data> floyd_rivest;
@@ -167,7 +169,20 @@ int main() {
             reference);
 
         // Random Sampling: приближённый алгоритм.
+        // С передачей точного алгоса
         RandomSamplingAlgorithm<Data> random_sampling;
+        test_approximate_algorithm(
+            "RandomSamplingAlgorithm",
+            random_sampling,
+            source,
+            reference,
+            0.1,   // eps
+            0.05,  // delta
+            42,    // seed
+            &exact);   
+        
+        // Без передачи точного алгоса  
+        RandomSamplingAlgorithm<Data> random_sampling_2;
         test_approximate_algorithm(
             "RandomSamplingAlgorithm",
             random_sampling,

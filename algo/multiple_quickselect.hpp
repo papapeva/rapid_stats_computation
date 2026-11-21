@@ -13,6 +13,11 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <condition_variable>
+#include <exception>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 namespace rapid_stats {
 
@@ -94,29 +99,38 @@ public:
         std::mt19937_64 rng(seed);
 
         // Начальная задача помещается в явный стек.
+                // Начальная задача помещается в очередь.
         struct Frame {
             std::size_t lo;
             std::size_t hi;
             std::size_t begin;
             std::size_t end;
+            std::uint64_t seed;
         };
 
-        std::vector<Frame> stack;
-        stack.push_back({0, n - 1, 0, queries.size()});
+        std::queue<Frame> tasks;
+        tasks.push({0, n - 1, 0, queries.size(), seed});
 
         const iterator first = std::begin(data);
 
-        while (!stack.empty()) {
-            const Frame frame = stack.back();
-            stack.pop_back();
+        std::mutex mutex;
+        std::condition_variable cv;
 
+        std::size_t outstanding = 1;
+        bool stop = false;
+        std::exception_ptr worker_error;
+
+        // Обработка одной задачи.
+        auto process_task = [&](const Frame& frame) {
             const std::size_t lo = frame.lo;
             const std::size_t hi = frame.hi;
             const std::size_t b = frame.begin;
             const std::size_t e = frame.end;
 
+            std::vector<Frame> children;
+
             if (b == e) {
-                continue;
+                return children;
             }
 
             // Если остался один элемент, он соответствует всем запросам.
@@ -125,8 +139,11 @@ public:
                     queries[j].value = *(first + static_cast<difference_type>(lo));
                 }
 
-                continue;
+                return children;
             }
+
+            // Генератор создаётся отдельно для каждой задачи.
+            std::mt19937_64 rng(frame.seed);
 
             // Случайно выбираем опорный элемент.
             const std::size_t pivot_index = random_index(rng, lo, hi);
@@ -139,27 +156,16 @@ public:
             const auto u_it = std::lower_bound(queries.begin() + static_cast<std::ptrdiff_t>(b),
                                                queries.begin() + static_cast<std::ptrdiff_t>(e),
                                                lt + 1, [](const Query& query, std::size_t rank) {
-                                                   /*
-                     * Автор: Valeriya Sokolova
-                     * Принимает: query — запрос, rank — граница ранга.
-                     * Возвращает: истину, если ранг запроса меньше rank.
-                     */
                                                    return query.rank < rank;
                                                });
 
             const auto v_it = std::upper_bound(queries.begin() + static_cast<std::ptrdiff_t>(b),
                                                queries.begin() + static_cast<std::ptrdiff_t>(e),
                                                gt + 1, [](std::size_t rank, const Query& query) {
-                                                   /*
-                     * Автор: Valeriya Sokolova
-                     * Принимает: rank — граница ранга, query — запрос.
-                     * Возвращает: истину, если rank меньше ранга запроса.
-                     */
                                                    return rank < query.rank;
                                                });
 
             const std::size_t u = static_cast<std::size_t>(u_it - queries.begin());
-
             const std::size_t v = static_cast<std::size_t>(v_it - queries.begin());
 
             // Все ранги из равной части уже найдены.
@@ -167,40 +173,139 @@ public:
                 queries[j].value = pivot;
             }
 
-            // Правую часть помещаем первой, чтобы левой части
-            // соответствовал порядок обработки рекурсивного алгоритма.
+            // Для каждой дочерней задачи создаём отдельное зерно генератора.
+            const std::uint64_t left_seed = rng();
+            const std::uint64_t right_seed = rng();
+
+            // Правую часть помещаем первой.
             if (v < e) {
-                stack.push_back({gt + 1, hi, v, e});
+                children.push_back({gt + 1, hi, v, e, right_seed});
             }
 
             if (b < u) {
-                stack.push_back({lo, lt - 1, b, u});
+                children.push_back({lo, lt - 1, b, u, left_seed});
+            }
+
+            return children;
+        };
+
+        // Функция, выполняемая каждым потоком.
+        auto worker = [&]() {
+            try {
+                while (true) {
+                    Frame frame;
+
+                    {
+                        std::unique_lock<std::mutex> lock(mutex);
+
+                        cv.wait(lock, [&]() {
+                            return stop || !tasks.empty() || outstanding == 0;
+                        });
+
+                        if (stop || outstanding == 0) {
+                            return;
+                        }
+
+                        frame = tasks.front();
+                        tasks.pop();
+                    }
+
+                    // Обрабатываем задачу без блокировки очереди.
+                    auto children = process_task(frame);
+
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+
+                        if (stop) {
+                            return;
+                        }
+
+                        for (const Frame& child : children) {
+                            tasks.push(child);
+                        }
+
+                        outstanding += children.size();
+                        --outstanding;
+                    }
+
+                    cv.notify_all();
+                }
+            } catch (...) {
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+
+                    if (!worker_error) {
+                        worker_error = std::current_exception();
+                    }
+
+                    stop = true;
+                }
+
+                cv.notify_all();
+            }
+        };
+
+        // Основной поток + максимум три дополнительных.
+        const std::size_t extra_threads =
+            ranks.size() > 1 ? 3 : 0;
+
+        std::vector<std::thread> workers;
+        workers.reserve(extra_threads);
+
+        try {
+            for (std::size_t i = 0; i < extra_threads; ++i) {
+                workers.emplace_back(worker);
+            }
+        } catch (...) {
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                stop = true;
+            }
+
+            cv.notify_all();
+
+            for (auto& thread : workers) {
+                if (thread.joinable()) {
+                    thread.join();
+                }
+            }
+
+            throw;
+        }
+
+        // Основной поток тоже обрабатывает задачи.
+        worker();
+
+        // Дожидаемся завершения дополнительных потоков.
+        for (auto& thread : workers) {
+            if (thread.joinable()) {
+                thread.join();
             }
         }
 
-        // Восстанавливаем исходный порядок запрошенных рангов.
-        std::vector<value_type> result;
-        result.reserve(ranks.size());
+        if (worker_error) {
+           std::rethrow_exception(worker_error);
+       }
 
-        for (const std::size_t rank : ranks) {
-            const auto it = std::lower_bound(queries.begin(), queries.end(), rank,
-                                             [](const Query& query, std::size_t value) {
-                                                 /*
-                     * Автор: Valeriya Sokolova
-                     * Принимает: query — запрос, value — запрошенный ранг.
-                     * Возвращает: истину, если ранг запроса меньше value.
-                     */
-                                                 return query.rank < value;
-                                             });
+       // Восстанавливаем результаты в исходном порядке ranks.
+       std::vector<value_type> result;
+       result.reserve(ranks.size());
 
-            if (it == queries.end() || it->rank != rank || !it->value) {
-                throw std::logic_error("Requested rank was not found");
-            }
+       for (const std::size_t rank : ranks) {
+           const auto it = std::lower_bound(
+               queries.begin(), queries.end(), rank,
+               [](const Query& query, std::size_t value) {
+                   return query.rank < value;
+               });
 
-            result.push_back(*it->value);
-        }
+           if (it == queries.end() || it->rank != rank || !it->value) {
+               throw std::logic_error("Failed to find requested order statistic");
+           }
 
-        return result;
+           result.push_back(*it->value);
+       }
+
+       return result;
     }
 
 private:
