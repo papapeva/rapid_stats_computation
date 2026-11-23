@@ -39,7 +39,7 @@ public:
     using iterator = typename OrderStatisticAlgorithm<Container>::iterator;
 
     virtual std::vector<iterator> sort(Container& data, const std::vector<std::size_t>& ranks,
-                                       double eps, double delta, std::uint64_t seed) = 0;
+                                       double eps, double delta, std::uint64_t seed, ExactOrderStatisticAlgorithm<Container>* exact_algorithm = nullptr) = 0;
 };
 
 } // namespace rapid_stats
